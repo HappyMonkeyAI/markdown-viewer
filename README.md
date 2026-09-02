@@ -2,11 +2,28 @@
 
 Thin **Windows 11** desktop app to open and preview Markdown files (double-click / Open With / drag-drop).
 
+## Agents Protocol
+
+This repo follows [HappyMonkeyAI/AgentsProtocol](https://github.com/HappyMonkeyAI/AgentsProtocol).
+
+| Doc | Purpose |
+|-----|---------|
+| [CONTEXT.md](./CONTEXT.md) | Operating manual — stack, non-negotiables, boundaries |
+| [AGENTS.md](./AGENTS.md) | Agent rules (Agents Protocol) |
+| [HERMES.md](./HERMES.md) | Hermes workflow + verify commands |
+| [BOOTSTRAP.md](./BOOTSTRAP.md) | Reseed `.agent/memories/` from history |
+| [SPEC.md](./SPEC.md) | Requirements + acceptance |
+| [TASKS.md](./TASKS.md) | Phased work |
+| [DESIGN.md](./DESIGN.md) | UI tokens |
+| [PROGRESS.md](./PROGRESS.md) | Dated verification log |
+| [docs/adr/](./docs/adr/) | Architecture decisions |
+| `.agent/memories/` | Long-term agent memory |
+
 ## Stack
 
 - **Electron** — shell, single-instance, file associations
 - **marked** + **marked-highlight** + **highlight.js** — GFM + code coloring
-- **DOMPurify** — sanitize HTML before inject
+- **DOMPurify** (+ jsdom in main) — sanitize HTML before IPC
 - **electron-builder** — `dir` / portable / NSIS; associates `.md`, `.markdown`, `.mdown`
 
 ## Dev
@@ -27,20 +44,35 @@ npx electron . fixtures/sample.md
 ## Package (Windows)
 
 ```bash
-npm run dist:dir
-# or full: npm run dist
+npm run dist:dir          # dist/win-unpacked/Markdown Viewer.exe
+npm run dist:portable     # portable single EXE
+npm run dist:nsis         # NSIS installer (file associations)
+npm run dist              # dir + portable + nsis
 ```
 
-After NSIS install, `.md` files can be opened via double-click / “Open with”. Unsigned builds may show SmartScreen once.
+| Artifact | Typical size | Use |
+|----------|--------------|-----|
+| `dist/win-unpacked/` | ~ unpacked tree | Local run / smoke packaged EXE |
+| `dist/MarkdownViewer-0.1.0-portable.exe` | ~86 MB | Single-file carry (no shell association) |
+| `dist/Markdown Viewer Setup 0.1.0.exe` | ~94 MB | Install + Start Menu / uninstall; **associations** |
+
+**Icon:** `build/icon.ico` → `build.win.icon` (embedded when packaging; `signExecutable: false` so icon still applies without Authenticode).
+
+**SmartScreen:** builds are **unsigned**. Windows may warn “Windows protected your PC” on first run — More info → Run anyway. That is not an app crash.
+
+**Associations:** declared in `package.json` `build.fileAssociations` (`.md`, `.markdown`, `.mdown`). They register on **NSIS install** for the installing user. After install: Settings → Apps → Default apps, or right-click → Open with → Markdown Viewer. `npm start` / portable / unpacked-dir alone do not own the system default handler.
+
+Silent install smoke (advanced):  
+`Setup.exe /S /D=C:\path\to\dir` then uninstall with `Uninstall Markdown Viewer.exe /S`.
 
 ## Security
 
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
-- Main process reads files; renderer gets content over IPC only
+- Main process reads files and renders markdown; renderer gets sanitized HTML over IPC
 - http(s) links open in the system browser; relative local links are not followed in v0.1
 
 ## v0.1 scope
 
 - Open one file (argv, dialog, drag-drop, second-instance)
 - GFM preview, light/dark theme, live reload on disk change
-- Not an editor, vault browser, or wikilink graph (see kb-vault-ui for that)
+- Not an editor, vault browser, or wikilink graph (see **kb-vault-ui** for that)

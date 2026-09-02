@@ -24,6 +24,7 @@ const required = [
   'renderer/styles.css',
   'package.json',
   'fixtures/sample.md',
+  'build/icon.ico',
 ];
 
 let failed = 0;
@@ -46,12 +47,17 @@ check('required files exist', () => {
   }
 });
 
-check('package.json main + fileAssociations', () => {
+check('package.json main + fileAssociations + win.icon', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(pkg.main, 'main.js');
   const exts = (pkg.build?.fileAssociations || []).map((f) => f.ext);
   assert.ok(exts.includes('md'));
   assert.ok(exts.includes('markdown'));
+  assert.equal(pkg.build?.win?.icon, 'build/icon.ico');
+  assert.ok(
+    (pkg.build?.files || []).includes('build/icon.ico'),
+    'build.files should include build/icon.ico'
+  );
 });
 
 check('fixture opens and renders', () => {
@@ -75,6 +81,15 @@ check('argv extraction finds sample path', () => {
   );
   assert.equal(found.length, 1);
   assert.equal(path.normalize(found[0]).toLowerCase(), path.normalize(sample).toLowerCase());
+});
+
+check('opencode agentworld lane script present', () => {
+  assert.ok(fs.existsSync(path.join(root, 'scripts', 'lane-opencode-agentworld.sh')));
+  assert.ok(fs.existsSync(path.join(root, '.env.example')));
+  const ex = fs.readFileSync(path.join(root, '.env.example'), 'utf8');
+  assert.match(ex, /UNSLOTH_STUDIO_URL/);
+  assert.match(ex, /AGENTWORLD_MODEL/);
+  assert.doesNotMatch(ex, /sk-unsloth-[0-9a-f]{8,}/i);
 });
 
 check('electron binary present after install', () => {

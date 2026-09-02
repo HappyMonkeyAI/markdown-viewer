@@ -1,0 +1,40 @@
+# TASKS.md — Markdown Viewer
+
+## Phase 0 — Agents Protocol packet
+
+- [x] `CONTEXT.md`, `AGENTS.md`, `BOOTSTRAP.md`, `SPEC.md`, `TASKS.md`, `DESIGN.md`, `PROGRESS.md`
+- [x] `docs/adr/` initial ADRs
+- [x] `docs/research/` links + sources
+- [x] `.agent/memories/` seeded from v0.1 implementation
+- [x] README points at protocol spine
+
+## Phase 1 — v0.1 viewer (code) — DONE 2026-09-02
+
+- [x] Electron main/preload/renderer shell
+- [x] Path helpers + markdown pipeline
+- [x] Open: argv, dialog, drop, second-instance
+- [x] Theme, watch reload, external links
+- [x] Unit tests + smoke
+- [x] fileAssociations declared in electron-builder config
+- [x] Initial git commit `7bc9752`
+
+## Phase 2 — Packaging polish
+
+- [x] Add `build/icon.ico` + wire `build.win.icon` (+ include in `files`)
+- [x] Run `npm run dist:dir`; confirm `dist/win-unpacked/Markdown Viewer.exe`
+- [x] Portable + NSIS artifacts (`dist:portable`, `dist:nsis`; `dist` builds all three)
+- [x] Silent NSIS install/uninstall smoke to temp prefix (EXE + uninstaller present)
+- [ ] Optional: set **default app** for `.md` once in Windows Settings (manual UX)
+- [x] Document SmartScreen / unsigned + associations in README
+
+## Phase 3 — Optional product extras (only if requested)
+
+- [ ] Print / export PDF
+- [ ] Remember last file / recent list
+- [ ] Zoom persistence
+- [ ] Relative image resolution from file directory (carefully sandboxed)
+- [ ] Explicit “open with default editor”
+
+## Phase 4 — Explicit non-goals unless ADR
+
+- Vault tree, wikilinks, Basic Memory, multi-root workspace → use/extend `kb-vault-ui` instead

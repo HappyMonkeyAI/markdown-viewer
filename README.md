@@ -1,81 +1,98 @@
 # Markdown Viewer
 
-Thin **Windows 11** desktop app to open and preview Markdown files (double-click / Open With / drag-drop).
+Thin **Windows 11** desktop app to open and preview Markdown files — double-click, Open With, drag-and-drop, or `npm start`.
 
-## Agents Protocol
+**v0.2.x** · [MIT License](./LICENSE) · Electron + GFM (marked) · sanitized HTML (DOMPurify)
 
-This repo follows [HappyMonkeyAI/AgentsProtocol](https://github.com/HappyMonkeyAI/AgentsProtocol).
+## Features
 
-| Doc | Purpose |
-|-----|---------|
-| [CONTEXT.md](./CONTEXT.md) | Operating manual — stack, non-negotiables, boundaries |
-| [AGENTS.md](./AGENTS.md) | Agent rules (Agents Protocol) |
-| [HERMES.md](./HERMES.md) | Hermes workflow + verify commands |
-| [BOOTSTRAP.md](./BOOTSTRAP.md) | Reseed `.agent/memories/` from history |
-| [SPEC.md](./SPEC.md) | Requirements + acceptance |
-| [TASKS.md](./TASKS.md) | Phased work |
-| [DESIGN.md](./DESIGN.md) | UI tokens |
-| [PROGRESS.md](./PROGRESS.md) | Dated verification log |
-| [docs/adr/](./docs/adr/) | Architecture decisions |
-| `.agent/memories/` | Long-term agent memory |
+- Open one `.md` / `.markdown` / `.mdown` file (argv, dialog, drop, second-instance)
+- GitHub-Flavored Markdown, fenced code highlighting, light/dark theme
+- Relative **images** (sandboxed under the note folder) and relative **`.md` links** (in-app + Back)
+- Recents + restore last file, zoom, Find (Ctrl+F), heading outline (Ctrl+Shift+O)
+- Edit in VS Code / Notepad, Print, live reload when the file changes on disk
+- NSIS installer + portable EXE; optional user-level Open With registration script
 
-## Stack
+**Not in scope:** vault tree, wikilinks, multi-root workspace editing (use a dedicated vault app).
 
-- **Electron** — shell, single-instance, file associations
-- **marked** + **marked-highlight** + **highlight.js** — GFM + code coloring
-- **DOMPurify** (+ jsdom in main) — sanitize HTML before IPC
-- **electron-builder** — `dir` / portable / NSIS; associates `.md`, `.markdown`, `.mdown`
-
-## Dev
+## Quick start (dev)
 
 ```bash
 npm install
 npm test
 npm run smoke
 npm start
-```
-
-Open a file:
-
-```bash
+# or:
 npx electron . fixtures/sample.md
 ```
 
-## Package (Windows)
+Requires Node.js 18+ and Windows x64 for packaging targets.
+
+## Install (Windows)
 
 ```bash
-npm run dist:dir          # dist/win-unpacked/Markdown Viewer.exe
-npm run dist:portable     # portable single EXE
-npm run dist:nsis         # NSIS installer (file associations)
-npm run dist              # dir + portable + nsis
+npm run dist:nsis       # dist/Markdown Viewer Setup <version>.exe
+npm run dist:portable   # dist/MarkdownViewer-<version>-portable.exe
+npm run dist:dir        # unpacked dir for local smoke
+npm run dist            # all three
 ```
 
-| Artifact | Typical size | Use |
-|----------|--------------|-----|
-| `dist/win-unpacked/` | ~ unpacked tree | Local run / smoke packaged EXE |
-| `dist/MarkdownViewer-0.1.0-portable.exe` | ~86 MB | Single-file carry (no shell association) |
-| `dist/Markdown Viewer Setup 0.1.0.exe` | ~94 MB | Install + Start Menu / uninstall; **associations** |
+| Artifact | Use |
+|----------|-----|
+| `Markdown Viewer Setup *.exe` | Install + Start Menu / uninstall; best path for **file associations** |
+| `MarkdownViewer-*-portable.exe` | Single-file carry (no shell association by itself) |
+| `dist/win-unpacked/` | Local run of packaged tree |
 
-**Icon:** `build/icon.ico` → `build.win.icon` (embedded when packaging; `signExecutable: false` so icon still applies without Authenticode).
+After NSIS install, associations are stronger if you also run:
 
-**SmartScreen:** builds are **unsigned**. Windows may warn “Windows protected your PC” on first run — More info → Run anyway. That is not an app crash.
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/register-md-openwith.ps1
+```
 
-**Associations:** declared in `package.json` `build.fileAssociations` (`.md`, `.markdown`, `.mdown`). They register on **NSIS install** for the installing user. After install: run `powershell -ExecutionPolicy Bypass -File scripts/register-md-openwith.ps1` (user ProgId / Open with). If Windows has a locked UserChoice, also use Settings → Default apps or right-click → Open with → Always. Installed path: `%LOCALAPPDATA%\Programs\Markdown Viewer\`. `npm start` / portable / unpacked-dir alone do not own the system default handler.
+Installed path: `%LOCALAPPDATA%\Programs\Markdown Viewer\`.
 
-Silent install smoke (advanced):  
-`Setup.exe /S /D=C:\path\to\dir` then uninstall with `Uninstall Markdown Viewer.exe /S`.
+**SmartScreen:** builds are **unsigned**. Windows may show “Windows protected your PC” on first run — More info → Run anyway. That is not an application crash.
 
-## Security
+**Default apps:** if another program owns `.md` via locked UserChoice, use Settings → Default apps or right-click → Open with → Always.
+
+Silent install (advanced): `Setup.exe /S /D=C:\path\to\dir` then uninstall with `Uninstall Markdown Viewer.exe /S`.
+
+## Security model
 
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
-- Main process reads files and renders markdown; renderer gets sanitized HTML over IPC
+- Main process reads files and renders markdown; renderer receives **sanitized** HTML over IPC
 - http(s) links open in the system browser
-- Relative **markdown** links open in-app (Back / Alt+Left); non-md relative targets are rejected
-- Relative **images** are inlined only if they resolve under the open file’s directory (no `..` escape), match an image extension, and are ≤2 MiB
+- Relative markdown links open in-app; non-markdown relative targets are rejected
+- Relative images inlined only under the open file’s directory, image extensions only, ≤2 MiB
 
-## Scope (v0.2)
+## Configuration / agent lane (optional)
 
-- Open one file (argv, dialog, drag-drop, second-instance); restore **last file** on launch
-- Recents (menu + empty state), zoom persistence, Edit (VS Code / Notepad), Print, Find, Outline
-- GFM preview, relative images + relative `.md` links, light/dark theme, live reload on disk change
-- Not a vault browser or wikilink graph (see **kb-vault-ui** for that)
+Local OpenCode + Unsloth AgentWorld helpers are optional and **not required** to run the viewer:
+
+```bash
+cp .env.example .env   # set UNSLOTH_STUDIO_URL + UNSLOTH_API_KEY for your studio
+./scripts/lane-opencode-agentworld.sh --dry-run
+```
+
+Never commit `.env`. Defaults in examples use placeholders (`http://127.0.0.1:8888`), not a private LAN host.
+
+## For AI agents / maintainers
+
+This repo also carries an [Agents Protocol](https://github.com/HappyMonkeyAI/AgentsProtocol)-style spine:
+
+| Doc | Purpose |
+|-----|---------|
+| [CONTEXT.md](./CONTEXT.md) | Operating manual — stack, non-negotiables |
+| [AGENTS.md](./AGENTS.md) | Agent rules |
+| [HERMES.md](./HERMES.md) | Hermes verify / packaging / lane commands |
+| [SPEC.md](./SPEC.md) / [TASKS.md](./TASKS.md) / [PROGRESS.md](./PROGRESS.md) | Requirements and log |
+| [docs/adr/](./docs/adr/) | Architecture decisions |
+| [THIRD_PARTY.md](./THIRD_PARTY.md) | Major dependency licenses |
+
+Verify: `npm test && npm run smoke`.
+
+## License
+
+[MIT](./LICENSE) © 2026 Stephen Phillips.
+
+Application dependencies remain under their own licenses (see [THIRD_PARTY.md](./THIRD_PARTY.md) and `package-lock.json`).

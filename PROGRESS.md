@@ -2,6 +2,17 @@
 
 Updated: 2026-09-02
 
+## 2026-09-02 — Public-release hygiene
+
+**Implemented**
+- MIT `LICENSE` + `THIRD_PARTY.md`
+- `package.json`: `license: MIT`, author, repository URLs; removed `private: true`
+- Product-first `README.md`; LAN studio host → `127.0.0.1` placeholders in examples/scripts
+- `.env` remains gitignored (local key never for public tree)
+
+**Note:** Repo visibility is still a GitHub setting (`gh repo edit --visibility public` when ready).
+
+
 ## 2026-09-02 — Find + outline (v0.2.2)
 
 **Implemented**
@@ -54,7 +65,7 @@ Updated: 2026-09-02
 
 ## 2026-09-02 — Private GitHub + install associations
 
-**Repo:** https://github.com/SPhillips1337/markdown-viewer (private)
+**Repo:** https://github.com/SPhillips1337/markdown-viewer
 **Commits:** `7bc9752` initial · `f5d9e07` docs/packaging/lane · follow-up register script
 
 **Install**

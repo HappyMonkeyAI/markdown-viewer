@@ -1,10 +1,18 @@
 {
   "name": "markdown-viewer",
   "version": "0.2.2",
-  "private": true,
-  "description": "Windows 11 markdown file viewer with double-click open",
+  "description": "Windows 11 thin Electron markdown viewer (double-click / Open With)",
   "main": "main.js",
-  "author": "steph",
+  "author": "Stephen Phillips",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SPhillips1337/markdown-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SPhillips1337/markdown-viewer/issues"
+  },
+  "homepage": "https://github.com/SPhillips1337/markdown-viewer#readme",
   "scripts": {
     "postinstall": "node node_modules/electron/install.js",
     "start": "electron .",
@@ -18,7 +26,7 @@
   "build": {
     "appId": "local.markdown-viewer",
     "productName": "Markdown Viewer",
-    "copyright": "Copyright © local",
+    "copyright": "Copyright © 2026 Stephen Phillips",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -60,15 +68,21 @@
       "target": [
         {
           "target": "dir",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "signExecutable": false

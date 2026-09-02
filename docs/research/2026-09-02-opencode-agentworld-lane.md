@@ -2,7 +2,7 @@
 
 **Checked:** 2026-09-02  
 **Host pattern:** LAN Unsloth Studio → `unsloth start opencode`  
-**Studio (default):** `http://192.168.5.157:8888`  
+**Studio (default):** `http://127.0.0.1:8888` (override via `.env` `UNSLOTH_STUDIO_URL`)  
 **Model (default):** `unsloth/Qwen-AgentWorld-35B-A3B-GGUF:UD-IQ4_NL`  
 **CLI profile:** teamwork `opencode` / `opencode-lane`  
 **Secrets:** `UNSLOTH_API_KEY` in gitignored `.env` only (see `.env.example`)
@@ -13,14 +13,14 @@
 |-------|------|
 | Hermes / human parent | Goal, worktree, subcontext brief, merge, `npm test` + `npm run smoke` |
 | OpenCode + AgentWorld | Implementation inside assigned paths on a worktree |
-| Unsloth Studio @ .157 | Local inference (GGUF) |
+| Unsloth Studio | Local inference (GGUF); URL from env |
 
 This is a **leaf coding lane**, not the product acceptance gate.
 
 ## Launch
 
 ```bash
-cp .env.example .env   # once; set UNSLOTH_API_KEY
+cp .env.example .env   # once; set UNSLOTH_API_KEY and UNSLOTH_STUDIO_URL
 ./scripts/lane-opencode-agentworld.sh --print-env
 ./scripts/lane-opencode-agentworld.sh --dry-run
 ./scripts/lane-opencode-agentworld.sh
@@ -30,7 +30,7 @@ cp .env.example .env   # once; set UNSLOTH_API_KEY
 Equivalent manual command (key from env):
 
 ```bash
-export UNSLOTH_STUDIO_URL=http://192.168.5.157:8888
+export UNSLOTH_STUDIO_URL=http://127.0.0.1:8888   # or your studio host
 export UNSLOTH_API_KEY=…   # from .env
 unsloth start opencode \
   --model unsloth/Qwen-AgentWorld-35B-A3B-GGUF:UD-IQ4_NL \

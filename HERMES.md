@@ -55,7 +55,7 @@ Default is solo Hermes. For larger or parallel work (pattern that worked well on
 4. After lanes finish: **final integration pass** on the integration branch (tests + smoke + cross-file glue). Parent verifies; do not trust worker self-report or task-board complete alone.
 5. CLI routing: host MCP `suggest_cli_for_task` / teamwork `profiles/`; user-named CLI wins.
 6. **OpenCode + AgentWorld lane (local):** see `docs/research/2026-09-02-opencode-agentworld-lane.md`.  
-   `cp .env.example .env` → set `UNSLOTH_API_KEY` → `./scripts/lane-opencode-agentworld.sh`  
+   `cp .env.example .env` → set `UNSLOTH_API_KEY` (+ `UNSLOTH_STUDIO_URL`) → `./scripts/lane-opencode-agentworld.sh`  
    Optional isolated tree: `./scripts/lane-opencode-agentworld.sh --worktree <task-id>`  
-   Studio default `http://192.168.5.157:8888`, model `Qwen-AgentWorld-35B-A3B-GGUF:UD-IQ4_NL`. Parent still runs verify.
+   Studio URL from env (example default `http://127.0.0.1:8888`); model `Qwen-AgentWorld-35B-A3B-GGUF:UD-IQ4_NL`. Parent still runs verify.
 7. Manifest lock/task-board scripts: only if explicitly enabling same-worktree swarm (see CONTEXT + research note).

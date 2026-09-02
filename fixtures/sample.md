@@ -30,6 +30,10 @@ function hello(name) {
 
 ---
 
-Plain paragraph with an image placeholder path that will not load:
+Remote image (https allowed by CSP):
 
-![alt text](https://via.placeholder.com/120x40.png?text=md)
+![remote placeholder](https://via.placeholder.com/120x40.png?text=md)
+
+Relative image (resolved under this file’s folder, sandboxed):
+
+![local sample](./sample-dot.png)

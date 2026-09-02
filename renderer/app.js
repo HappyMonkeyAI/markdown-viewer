@@ -5,9 +5,14 @@ const api = window.mdViewer;
 const els = {
   open: document.getElementById('btn-open'),
   reveal: document.getElementById('btn-reveal'),
+  editor: document.getElementById('btn-editor'),
   theme: document.getElementById('btn-theme'),
+  zoomOut: document.getElementById('btn-zoom-out'),
+  zoomIn: document.getElementById('btn-zoom-in'),
+  zoomLabel: document.getElementById('zoom-label'),
   label: document.getElementById('file-label'),
   empty: document.getElementById('empty'),
+  recents: document.getElementById('recents'),
   content: document.getElementById('content'),
   drop: document.getElementById('drop-zone'),
   toast: document.getElementById('toast'),
@@ -49,6 +54,12 @@ function showToast(message, isError) {
   }, 3200);
 }
 
+function updateZoomLabel(factor) {
+  if (!els.zoomLabel) return;
+  const pct = Math.round((factor || 1) * 100);
+  els.zoomLabel.textContent = pct + '%';
+}
+
 /**
  * @param {{ path: string, name: string, html: string, title: string }} payload
  */
@@ -57,6 +68,7 @@ function showFile(payload) {
   els.label.textContent = payload.name;
   els.label.title = payload.path;
   els.reveal.disabled = false;
+  if (els.editor) els.editor.disabled = false;
   els.empty.hidden = true;
   els.content.hidden = false;
   els.content.innerHTML = payload.html || '';
@@ -76,21 +88,65 @@ function showFile(payload) {
     } else {
       a.addEventListener('click', function (ev) {
         ev.preventDefault();
-        showToast('Local relative links are not opened in v0.1', false);
+        showToast('Local relative links are not opened yet', false);
       });
     }
   });
 }
 
-function showEmpty() {
+/**
+ * @param {Array<{ path: string, name: string }>|undefined} list
+ */
+function renderRecents(list) {
+  if (!els.recents) return;
+  els.recents.innerHTML = '';
+  if (!list || !list.length) {
+    els.recents.hidden = true;
+    return;
+  }
+  els.recents.hidden = false;
+  const heading = document.createElement('p');
+  heading.className = 'muted recents-heading';
+  heading.textContent = 'Recent';
+  els.recents.appendChild(heading);
+  const ul = document.createElement('ul');
+  ul.className = 'recents-list';
+  list.slice(0, 8).forEach(function (item) {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'recent-item';
+    btn.textContent = item.name;
+    btn.title = item.path;
+    btn.addEventListener('click', function () {
+      api.openPath(item.path).then(function (result) {
+        if (!result || !result.ok) {
+          showToast((result && result.error) || 'Failed to open file', true);
+        }
+      });
+    });
+    li.appendChild(btn);
+    ul.appendChild(li);
+  });
+  els.recents.appendChild(ul);
+}
+
+function showEmpty(recentsList) {
   current = null;
   els.label.textContent = 'No file open';
   els.label.title = '';
   els.reveal.disabled = true;
+  if (els.editor) els.editor.disabled = true;
   els.empty.hidden = false;
   els.content.hidden = true;
   els.content.innerHTML = '';
   document.title = 'Markdown Viewer';
+  if (recentsList) renderRecents(recentsList);
+  else {
+    api.getRecents().then(function (list) {
+      renderRecents(list);
+    });
+  }
 }
 
 els.open.addEventListener('click', function () {
@@ -101,10 +157,33 @@ els.reveal.addEventListener('click', function () {
   if (current && current.path) api.showItemInFolder(current.path);
 });
 
+if (els.editor) {
+  els.editor.addEventListener('click', function () {
+    if (!current || !current.path) return;
+    api.openInEditor(current.path).then(function (result) {
+      if (!result || !result.ok) {
+        showToast((result && result.error) || 'Could not open editor', true);
+      }
+    });
+  });
+}
+
 els.theme.addEventListener('click', function () {
   const now = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   applyTheme(now);
 });
+
+function bumpZoom(delta) {
+  api.getZoom().then(function (z) {
+    const next = Math.min(3, Math.max(0.5, (z || 1) + delta));
+    api.setZoom(next).then(function (applied) {
+      updateZoomLabel(applied || next);
+    });
+  });
+}
+
+if (els.zoomIn) els.zoomIn.addEventListener('click', function () { bumpZoom(0.1); });
+if (els.zoomOut) els.zoomOut.addEventListener('click', function () { bumpZoom(-0.1); });
 
 ['dragenter', 'dragover'].forEach(function (evt) {
   els.drop.addEventListener(evt, function (e) {
@@ -153,11 +232,28 @@ api.onError(function (payload) {
   showToast((payload && payload.message) || 'Error', true);
 });
 
+api.onRecents(function (list) {
+  if (!current) renderRecents(list);
+});
+
 initTheme();
 showEmpty();
+api.getZoom().then(updateZoomLabel);
 
 window.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     els.toast.hidden = true;
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+    e.preventDefault();
+    bumpZoom(0.1);
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+    e.preventDefault();
+    bumpZoom(-0.1);
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+    e.preventDefault();
+    api.setZoom(1).then(updateZoomLabel);
   }
 });

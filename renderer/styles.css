@@ -136,6 +136,66 @@ button:disabled {
   border-radius: 4px;
 }
 
+.zoom-label {
+  font-size: 12px;
+  min-width: 2.5rem;
+  text-align: center;
+  display: inline-block;
+}
+
+.recents {
+  margin-top: 1.5rem;
+  text-align: left;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.recents-heading {
+  margin-bottom: 0.4rem;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.recents-list li {
+  border-bottom: 1px solid var(--border);
+}
+
+.recents-list li:last-child {
+  border-bottom: none;
+}
+
+button.recent-item {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  padding: 10px 14px;
+  background: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.recent-item:hover {
+  background: var(--toolbar);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+}
+
 .markdown-body {
   max-width: 52rem;
   margin: 0 auto;

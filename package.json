@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Windows 11 markdown file viewer with double-click open",
   "main": "main.js",
@@ -29,6 +29,7 @@
       "lib/**/*",
       "renderer/**/*",
       "fixtures/sample.md",
+      "fixtures/sample-dot.png",
       "build/icon.ico",
       "package.json"
     ],

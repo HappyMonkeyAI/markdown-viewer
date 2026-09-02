@@ -3,251 +3,56 @@
 const {
   app,
   BrowserWindow,
-  Menu,
-  dialog,
   ipcMain,
+  dialog,
   shell,
+  Menu,
   nativeTheme,
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { JSDOM } = require('jsdom');
-const {
-  extractOpenPathsFromArgv,
-  normalizeOpenPath,
-  isMarkdownPath,
-} = require('./lib/paths');
+const { spawn } = require('child_process');
+const { extractOpenPathFromArgv, isMarkdownPath } = require('./lib/paths');
 const { createMarkdownRenderer } = require('./lib/markdown');
+const { rewriteLocalImageSrcs } = require('./lib/media');
+const { createPrefsStore } = require('./lib/prefs');
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
+/** @type {import('fs').FSWatcher | null} */
+let watcher = null;
 /** @type {string | null} */
 let currentFile = null;
-/** @type {fs.FSWatcher | null} */
-let watcher = null;
-let watcherTimer = null;
-
-const purifyDom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-const md = createMarkdownRenderer({ window: purifyDom.window });
-
-app.setName('markdown-viewer');
-app.setPath('userData', path.join(app.getPath('appData'), 'markdown-viewer'));
+/** @type {ReturnType<typeof createMarkdownRenderer> | null} */
+let md = null;
+/** @type {ReturnType<typeof createPrefsStore> | null} */
+let prefs = null;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
-    const paths = extractOpenPathsFromArgv(argv, {
-      execPath: process.execPath,
-      appPath: app.getAppPath(),
-    });
+    const file = extractOpenPathFromArgv(argv);
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-    if (paths[0]) openMarkdownFile(paths[0]);
+    if (file) void openMarkdownFile(file);
   });
 }
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 960,
-    height: 720,
-    minWidth: 480,
-    minHeight: 320,
-    show: false,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1e1e' : '#fafafa',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      spellcheck: false,
-    },
-  });
-
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-
-  mainWindow.once('ready-to-show', () => {
-    if (mainWindow) mainWindow.show();
-  });
-
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      const u = new URL(url);
-      if (u.protocol === 'http:' || u.protocol === 'https:') {
-        shell.openExternal(url);
-      }
-    } catch {
-      /* ignore */
-    }
-    return { action: 'deny' };
-  });
-
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    const rendererDir = pathToFileURL(path.join(__dirname, 'renderer')).href;
-    if (!url.startsWith(rendererDir)) {
-      event.preventDefault();
-      try {
-        const u = new URL(url);
-        if (u.protocol === 'http:' || u.protocol === 'https:') {
-          shell.openExternal(url);
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  });
-
-  mainWindow.on('closed', () => {
-    stopWatch();
-    mainWindow = null;
-  });
-
-  buildMenu();
-}
-
-function buildMenu() {
-  const isMac = process.platform === 'darwin';
-  const template = [
-    ...(isMac
-      ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: 'about' },
-              { type: 'separator' },
-              { role: 'quit' },
-            ],
-          },
-        ]
-      : []),
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'Open…',
-          accelerator: 'CmdOrCtrl+O',
-          click: () => void promptOpen(),
-        },
-        {
-          label: 'Reload file',
-          accelerator: 'CmdOrCtrl+R',
-          click: () => {
-            if (currentFile) openMarkdownFile(currentFile);
-          },
-        },
-        { type: 'separator' },
-        isMac ? { role: 'close' } : { role: 'quit' },
-      ],
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'togglefullscreen' },
-        { type: 'separator' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { role: 'resetZoom' },
-        { type: 'separator' },
-        {
-          label: 'Toggle Developer Tools',
-          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-          click: () => mainWindow?.webContents.toggleDevTools(),
-        },
-      ],
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'Open sample markdown',
-          click: () => {
-            const sample = path.join(__dirname, 'fixtures', 'sample.md');
-            if (fs.existsSync(sample)) openMarkdownFile(sample);
-          },
-        },
-      ],
-    },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-}
-
-async function promptOpen() {
-  if (!mainWindow) return;
-  const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Open Markdown',
-    properties: ['openFile'],
-    filters: [
-      { name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'] },
-      { name: 'All files', extensions: ['*'] },
-    ],
-  });
-  if (result.canceled || !result.filePaths[0]) return;
-  openMarkdownFile(result.filePaths[0]);
-}
-
-/**
- * @param {string} filePath
- */
-function openMarkdownFile(filePath) {
-  const norm = normalizeOpenPath(filePath);
-  if (!norm.ok) {
-    sendToRenderer('file:error', { message: norm.error });
-    return;
+function getRenderer() {
+  if (!md) {
+    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+    md = createMarkdownRenderer({ window: dom.window });
   }
-  const resolved = norm.path;
-  let raw;
-  try {
-    raw = fs.readFileSync(resolved, 'utf8');
-  } catch (err) {
-    sendToRenderer('file:error', {
-      message: err && err.message ? err.message : 'Failed to read file',
-      path: resolved,
-    });
-    return;
-  }
-
-  let rendered;
-  try {
-    rendered = md.render(raw);
-  } catch (err) {
-    sendToRenderer('file:error', {
-      message: err && err.message ? err.message : 'Failed to render markdown',
-      path: resolved,
-    });
-    return;
-  }
-
-  currentFile = resolved;
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setTitle(`${path.basename(resolved)} — Markdown Viewer`);
-  }
-
-  const payload = {
-    path: resolved,
-    name: path.basename(resolved),
-    html: rendered.html,
-    title: rendered.title,
-    mtimeMs: fs.statSync(resolved).mtimeMs,
-  };
-  sendToRenderer('file:opened', payload);
-  watchFile(resolved);
-}
-
-function sendToRenderer(channel, payload) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, payload);
-  }
+  return md;
 }
 
 function stopWatch() {
-  if (watcherTimer) {
-    clearTimeout(watcherTimer);
-    watcherTimer = null;
-  }
   if (watcher) {
     try {
       watcher.close();
@@ -258,93 +63,351 @@ function stopWatch() {
   }
 }
 
-function watchFile(filePath) {
+function startWatch(filePath) {
   stopWatch();
   try {
-    watcher = fs.watch(filePath, { persistent: true }, (eventType) => {
-      if (eventType !== 'change' && eventType !== 'rename') return;
-      if (watcherTimer) clearTimeout(watcherTimer);
-      watcherTimer = setTimeout(() => {
-        if (currentFile !== filePath) return;
-        try {
-          if (!fs.existsSync(filePath)) return;
-          const raw = fs.readFileSync(filePath, 'utf8');
-          const rendered = md.render(raw);
-          sendToRenderer('file:changed', {
-            path: filePath,
-            name: path.basename(filePath),
-            html: rendered.html,
-            title: rendered.title,
-            mtimeMs: fs.statSync(filePath).mtimeMs,
-          });
-        } catch {
-          /* ignore transient lock errors on Windows */
-        }
-      }, 400);
+    let timer = null;
+    watcher = fs.watch(filePath, { persistent: true }, () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (currentFile === filePath) void openMarkdownFile(filePath, { fromWatch: true });
+      }, 120);
     });
   } catch {
-    /* watching is best-effort */
+    /* optional */
   }
 }
 
-function initialPathFromArgv() {
-  const paths = extractOpenPathsFromArgv(process.argv, {
-    execPath: process.execPath,
-    appPath: app.getAppPath(),
-  });
-  return paths[0] || null;
+/**
+ * @param {string} filePath
+ * @param {{ fromWatch?: boolean }} [opts]
+ */
+async function openMarkdownFile(filePath, opts = {}) {
+  const resolved = path.resolve(filePath);
+  if (!isMarkdownPath(resolved)) {
+    sendError(`Not a markdown file: ${path.basename(resolved)}`);
+    return { ok: false, error: 'Not a markdown file' };
+  }
+  let source;
+  try {
+    source = fs.readFileSync(resolved, 'utf8');
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    sendError(`Could not read file: ${msg}`);
+    return { ok: false, error: msg };
+  }
+
+  const { html: rawHtml, title } = getRenderer().render(source);
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+  const html = rewriteLocalImageSrcs(rawHtml, resolved, { window: dom.window });
+  currentFile = resolved;
+  startWatch(resolved);
+  if (prefs) prefs.recordOpen(resolved);
+  rebuildMenu();
+
+  const payload = {
+    path: resolved,
+    name: path.basename(resolved),
+    html,
+    title,
+  };
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (opts.fromWatch) {
+      mainWindow.webContents.send('md:changed', payload);
+    } else {
+      mainWindow.webContents.send('md:opened', payload);
+    }
+  }
+  return { ok: true, ...payload };
 }
 
-app.whenReady().then(() => {
+function sendError(message) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('md:error', { message });
+  }
+}
+
+async function openWithDialog() {
+  if (!mainWindow) return { ok: false, error: 'No window' };
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Open Markdown',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd', 'mkdn'] },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  });
+  if (result.canceled || !result.filePaths[0]) {
+    return { ok: false, canceled: true };
+  }
+  return openMarkdownFile(result.filePaths[0]);
+}
+
+/**
+ * Open file in an external editor (VS Code if on PATH, else Notepad on Windows).
+ * @param {string} filePath
+ */
+function openInExternalEditor(filePath) {
+  const resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved)) {
+    return Promise.resolve({ ok: false, error: 'File not found' });
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (result) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    const tryCode = spawn('code', ['-g', resolved], {
+      shell: true,
+      windowsHide: true,
+      detached: true,
+      stdio: 'ignore',
+    });
+    tryCode.on('error', () => {
+      tryNotepad();
+    });
+    tryCode.on('close', (code) => {
+      if (code === 0 || code === null) {
+        try {
+          tryCode.unref();
+        } catch {
+          /* ignore */
+        }
+        done({ ok: true, editor: 'code' });
+      } else {
+        tryNotepad();
+      }
+    });
+
+    function tryNotepad() {
+      if (process.platform === 'win32') {
+        try {
+          const np = spawn('notepad.exe', [resolved], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: false,
+          });
+          np.on('error', (err) => {
+            done({ ok: false, error: err.message });
+          });
+          np.unref();
+          done({ ok: true, editor: 'notepad' });
+        } catch (err) {
+          done({ ok: false, error: err && err.message ? err.message : String(err) });
+        }
+      } else {
+        shell
+          .openPath(resolved)
+          .then((errMsg) => {
+            if (errMsg) done({ ok: false, error: errMsg });
+            else done({ ok: true, editor: 'default' });
+          })
+          .catch((err) => done({ ok: false, error: String(err) }));
+      }
+    }
+  });
+}
+
+function rebuildMenu() {
+  const recents = prefs ? prefs.getRecents() : [];
+  const recentSub =
+    recents.length === 0
+      ? [{ label: '(empty)', enabled: false }]
+      : [
+          ...recents.map((r) => ({
+            label: r.name,
+            toolTip: r.path,
+            click: () => void openMarkdownFile(r.path),
+          })),
+          { type: 'separator' },
+          {
+            label: 'Clear recent',
+            click: () => {
+              if (prefs) prefs.clearRecents();
+              rebuildMenu();
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('md:recents', prefs.getRecents());
+              }
+            },
+          },
+        ];
+
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Open…',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openWithDialog(),
+        },
+        {
+          label: 'Open recent',
+          submenu: recentSub,
+        },
+        {
+          label: 'Reveal in Explorer',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          enabled: Boolean(currentFile),
+          click: () => {
+            if (currentFile) shell.showItemInFolder(currentFile);
+          },
+        },
+        {
+          label: 'Open in editor',
+          accelerator: 'CmdOrCtrl+E',
+          enabled: Boolean(currentFile),
+          click: async () => {
+            if (!currentFile) return;
+            const r = await openInExternalEditor(currentFile);
+            if (!r.ok) sendError(r.error || 'Could not open editor');
+          },
+        },
+        {
+          label: 'Print…',
+          accelerator: 'CmdOrCtrl+P',
+          enabled: Boolean(currentFile),
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.print({});
+            }
+          },
+        },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Zoom in',
+          accelerator: 'CmdOrCtrl+=',
+          click: () => adjustZoom(0.1),
+        },
+        {
+          label: 'Zoom out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => adjustZoom(-0.1),
+        },
+        {
+          label: 'Reset zoom',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => setZoom(1),
+        },
+        { type: 'separator' },
+        { role: 'toggleDevTools' },
+        { role: 'reload' },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+function adjustZoom(delta) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const cur = mainWindow.webContents.getZoomFactor();
+  setZoom(cur + delta);
+}
+
+function setZoom(factor) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const z = Math.min(3, Math.max(0.5, factor));
+  mainWindow.webContents.setZoomFactor(z);
+  if (prefs) prefs.setZoomFactor(z);
+}
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 960,
+    height: 720,
+    minWidth: 480,
+    minHeight: 360,
+    show: false,
+    autoHideMenuBar: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+    },
+  });
+
+  win.once('ready-to-show', () => {
+    win.show();
+    if (prefs) {
+      const z = prefs.getZoomFactor();
+      if (z && z !== 1) win.webContents.setZoomFactor(z);
+    }
+  });
+
+  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow = win;
+  rebuildMenu();
+
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+    stopWatch();
+    currentFile = null;
+  });
+}
+
+app.whenReady().then(async () => {
+  prefs = createPrefsStore(app.getPath('userData'));
+
+  ipcMain.handle('md:open-dialog', () => openWithDialog());
+  ipcMain.handle('md:open-path', (_e, filePath) => {
+    if (typeof filePath !== 'string') return { ok: false, error: 'Invalid path' };
+    return openMarkdownFile(filePath);
+  });
+  ipcMain.handle('md:show-item', (_e, filePath) => {
+    if (typeof filePath === 'string' && filePath) shell.showItemInFolder(filePath);
+  });
+  ipcMain.handle('md:open-external', (_e, url) => {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      return shell.openExternal(url);
+    }
+    return Promise.resolve();
+  });
+  ipcMain.handle('md:get-recents', () => (prefs ? prefs.getRecents() : []));
+  ipcMain.handle('md:open-in-editor', (_e, filePath) => {
+    if (typeof filePath !== 'string' || !filePath) {
+      return { ok: false, error: 'No file' };
+    }
+    return openInExternalEditor(filePath);
+  });
+  ipcMain.handle('md:set-zoom', (_e, factor) => {
+    if (typeof factor === 'number') setZoom(factor);
+    return prefs ? prefs.getZoomFactor() : 1;
+  });
+  ipcMain.handle('md:get-zoom', () =>
+    mainWindow && !mainWindow.isDestroyed()
+      ? mainWindow.webContents.getZoomFactor()
+      : prefs
+        ? prefs.getZoomFactor()
+        : 1
+  );
+
   createWindow();
 
-  ipcMain.handle('app:getInfo', () => ({
-    name: app.getName(),
-    version: app.getVersion(),
-    platform: process.platform,
-    dark: nativeTheme.shouldUseDarkColors,
-  }));
-
-  ipcMain.handle('file:openDialog', async () => {
-    await promptOpen();
-    return { ok: true };
-  });
-
-  ipcMain.handle('file:openPath', async (_evt, filePath) => {
-    const norm = normalizeOpenPath(filePath);
-    if (!norm.ok) return { ok: false, error: norm.error };
-    if (!fs.existsSync(norm.path)) return { ok: false, error: 'File not found' };
-    openMarkdownFile(norm.path);
-    return { ok: true, path: norm.path };
-  });
-
-  ipcMain.handle('shell:openExternal', async (_evt, url) => {
-    if (typeof url !== 'string') return { ok: false };
-    try {
-      const u = new URL(url);
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-        return { ok: false, error: 'Only http(s) allowed' };
-      }
-      await shell.openExternal(url);
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: err && err.message ? err.message : 'open failed' };
+  const fromArgv = extractOpenPathFromArgv(process.argv);
+  if (fromArgv) {
+    await openMarkdownFile(fromArgv);
+  } else if (prefs && prefs.getLastFile()) {
+    const last = prefs.getLastFile();
+    if (last && fs.existsSync(last) && isMarkdownPath(last)) {
+      await openMarkdownFile(last);
+    } else if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow.webContents.send('md:recents', prefs.getRecents());
+      });
     }
-  });
-
-  ipcMain.handle('shell:showItemInFolder', async (_evt, filePath) => {
-    if (typeof filePath !== 'string' || !fs.existsSync(filePath)) {
-      return { ok: false };
-    }
-    shell.showItemInFolder(filePath);
-    return { ok: true };
-  });
-
-  const initial = initialPathFromArgv();
-  if (initial) {
-    mainWindow?.webContents.once('did-finish-load', () => {
-      openMarkdownFile(initial);
-    });
   }
 
   app.on('activate', () => {
@@ -353,11 +416,10 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  stopWatch();
   if (process.platform !== 'darwin') app.quit();
 });
 
-module.exports = {
-  extractOpenPathsFromArgv,
-  normalizeOpenPath,
-  isMarkdownPath,
-};
+// Silence unused import if tree-shaken differently
+void pathToFileURL;
+void nativeTheme;

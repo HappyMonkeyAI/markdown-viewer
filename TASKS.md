@@ -30,13 +30,13 @@
 - [ ] Optional: if another app holds UserChoice, set default in Windows Settings UI
 - [x] Document SmartScreen / unsigned + associations in README
 
-## Phase 3 — Optional product extras (only if requested)
+## Phase 3 — Product extras — DONE 2026-09-02
 
-- [ ] Print / export PDF
-- [ ] Remember last file / recent list
-- [ ] Zoom persistence
-- [ ] Relative image resolution from file directory (carefully sandboxed)
-- [ ] Explicit “open with default editor”
+- [x] Print (File → Print / Ctrl+P; system print dialog → PDF if chosen)
+- [x] Remember last file / recent list (`userData/prefs.json`, File → Open recent, empty-state list)
+- [x] Zoom persistence (toolbar + Ctrl+=/−/0; stored in prefs)
+- [x] Relative image resolution from file directory (sandboxed: under note dir, image ext, ≤2MiB → data URL)
+- [x] Explicit “open with default editor” (VS Code if on PATH, else Notepad; Ctrl+E / Edit button)
 
 ## Phase 4 — Explicit non-goals unless ADR
 

@@ -2,13 +2,13 @@
 
 Companion to `CONTEXT.md`. Use when this repo is driven from Hermes Agent.
 
-> Root `AGENTS.md` is the canonical Agents Protocol file. If the host blocks creating it, treat **this file + CONTEXT.md** as the agent contract until `AGENTS.md` is approved.
+Canonical agent rules: **`AGENTS.md`**. This file adds Hermes-specific verify/packaging/lane commands.
 
 ## Grounding order
 
 1. `README.md`
 2. `CONTEXT.md`
-3. `AGENTS.md` (when present) or this file
+3. `AGENTS.md`
 4. `docs/adr/*` as needed
 5. `.agent/memories/patterns_and_lessons.md`
 

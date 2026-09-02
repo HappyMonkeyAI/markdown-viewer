@@ -2,6 +2,17 @@
 
 Updated: 2026-09-02
 
+## 2026-09-02 — v0.2.0 package reinstall + root AGENTS.md
+
+**Packaging**
+- `npm run dist` → portable + NSIS **0.2.0** (~82 MB each); unpacked EXE ~196 MB
+- Silent reinstall → `%LOCALAPPDATA%\Programs\Markdown Viewer\` FileVersion **0.2.0**
+- Re-ran `scripts/register-md-openwith.ps1`; `.md` → `MarkdownViewer.md`; launch sample OK
+
+**AGENTS.md**
+- Root `AGENTS.md` present (from `docs/protocol/AGENTS.proposed.md`); HERMES points to it as canonical
+
+
 ## 2026-09-02 — Phase 3 polish (v0.2.0)
 
 **Implemented**

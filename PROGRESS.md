@@ -12,14 +12,15 @@
 - Drop `highlightAuto` (escape unlabeled fences); atomic prefs write; DevTools only when unpackaged
 - Tests: dialog↔ext parity, `isAllowedUserPath`, unlabeled fence escape
 
-**Verified:** `npm test` 39/39 · smoke 6/6
+**Verified:** `npm test` 39/39 · smoke 6/6  
+**Release:** https://github.com/HappyMonkeyAI/markdown-viewer/releases/tag/v0.2.3 (unsigned NSIS + portable)
 
 ## 2026-09-02 — GitHub Release v0.2.2 (unsigned Windows)
 
 - Tag `v0.2.2` on `0a36c67`; public release with NSIS Setup + portable
 - Release notes disclose **unsigned** / SmartScreen (More info → Run anyway)
 - Assets: `Markdown Viewer Setup 0.2.2.exe` (~91MB), `MarkdownViewer-0.2.2-portable.exe` (~82MB)
-- URL: https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.2
+- URL: https://github.com/HappyMonkeyAI/markdown-viewer/releases/tag/v0.2.2
 - Playbook for other projects: `docs/release-windows-unsigned.md`
 
 Updated: 2026-09-02
@@ -87,7 +88,7 @@ Updated: 2026-09-02
 
 ## 2026-09-02 — Private GitHub + install associations
 
-**Repo:** https://github.com/SPhillips1337/markdown-viewer
+**Repo:** https://github.com/HappyMonkeyAI/markdown-viewer
 **Commits:** `7bc9752` initial · `f5d9e07` docs/packaging/lane · follow-up register script
 
 **Install**

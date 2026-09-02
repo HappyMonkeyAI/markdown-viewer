@@ -72,4 +72,4 @@ gh release view "v${VER}"
 # open the release URL; confirm both assets + SmartScreen wording
 ```
 
-Live examples: [v0.2.3](https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.3), [v0.2.2](https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.2)
+Live examples: [v0.2.3](https://github.com/HappyMonkeyAI/markdown-viewer/releases/tag/v0.2.3), [v0.2.2](https://github.com/HappyMonkeyAI/markdown-viewer/releases/tag/v0.2.2)

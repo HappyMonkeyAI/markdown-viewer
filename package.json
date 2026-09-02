@@ -7,12 +7,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SPhillips1337/markdown-viewer.git"
+    "url": "https://github.com/HappyMonkeyAI/markdown-viewer.git"
   },
   "bugs": {
-    "url": "https://github.com/SPhillips1337/markdown-viewer/issues"
+    "url": "https://github.com/HappyMonkeyAI/markdown-viewer/issues"
   },
-  "homepage": "https://github.com/SPhillips1337/markdown-viewer#readme",
+  "homepage": "https://github.com/HappyMonkeyAI/markdown-viewer#readme",
   "scripts": {
     "postinstall": "node node_modules/electron/install.js",
     "start": "electron .",

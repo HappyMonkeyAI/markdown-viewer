@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Markdown Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./vendor/hljs-github-dark.min.css" id="hljs-dark" disabled />
+    <link rel="stylesheet" href="./vendor/hljs-github.min.css" id="hljs-light" />
+  </head>
+  <body>
+    <header id="toolbar">
+      <div class="left">
+        <button type="button" id="btn-open" title="Open markdown file (Ctrl+O)">Open</button>
+        <button type="button" id="btn-reveal" title="Show in Explorer" disabled>Reveal</button>
+      </div>
+      <div class="center">
+        <span id="file-label" class="muted">No file open</span>
+      </div>
+      <div class="right">
+        <button type="button" id="btn-theme" title="Toggle light/dark">Theme</button>
+      </div>
+    </header>
+    <main id="drop-zone">
+      <div id="empty" class="empty">
+        <p><strong>Markdown Viewer</strong></p>
+        <p>Open a <code>.md</code> file, drag one here, or double-click a markdown file after install.</p>
+        <p class="muted">Ctrl+O to open · external links open in your browser</p>
+      </div>
+      <article id="content" class="markdown-body" hidden></article>
+    </main>
+    <div id="toast" hidden></div>
+    <script src="./app.js"></script>
+  </body>
+</html>

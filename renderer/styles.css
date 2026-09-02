@@ -1,0 +1,271 @@
+:root {
+  color-scheme: light dark;
+  --bg: #fafafa;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --border: #e0e0e0;
+  --toolbar: #f0f0f0;
+  --accent: #0b57d0;
+  --code-bg: #f4f4f5;
+  --blockquote: #6a737d;
+  --table-border: #d0d7de;
+  --danger: #b3261e;
+  --toast-bg: #1a1a1a;
+  --toast-fg: #fff;
+  --link: #0b57d0;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --fg: #e8e8e8;
+  --muted: #a0a0a0;
+  --border: #333;
+  --toolbar: #2a2a2a;
+  --accent: #8ab4f8;
+  --code-bg: #2d2d2d;
+  --blockquote: #9aa0a6;
+  --table-border: #444;
+  --danger: #f2b8b5;
+  --toast-bg: #e8e8e8;
+  --toast-fg: #111;
+  --link: #8ab4f8;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--toolbar);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+#toolbar .left,
+#toolbar .right {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+#toolbar .center {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+}
+
+#file-label {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+button {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+#drop-zone {
+  flex: 1 1 auto;
+  overflow: auto;
+  position: relative;
+}
+
+#drop-zone.dragover {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+}
+
+.empty {
+  max-width: 36rem;
+  margin: 12vh auto;
+  padding: 24px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.empty code {
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.markdown-body {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 24px 28px 64px;
+  line-height: 1.65;
+  font-size: 16px;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  line-height: 1.25;
+  margin-top: 1.6em;
+  margin-bottom: 0.5em;
+  font-weight: 650;
+}
+
+.markdown-body h1 {
+  font-size: 1.85rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25em;
+}
+
+.markdown-body h2 {
+  font-size: 1.45rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2em;
+}
+
+.markdown-body a {
+  color: var(--link);
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body code {
+  font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+  font-size: 0.9em;
+  background: var(--code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+.markdown-body pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow: auto;
+  line-height: 1.45;
+}
+
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.markdown-body blockquote {
+  margin: 1em 0;
+  padding: 0 1em;
+  border-left: 4px solid var(--border);
+  color: var(--blockquote);
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  display: block;
+  overflow-x: auto;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--table-border);
+  padding: 8px 12px;
+}
+
+.markdown-body th {
+  background: var(--toolbar);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.2em;
+}
+
+.markdown-body input[type="checkbox"] {
+  margin-right: 0.4em;
+}
+
+#toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  max-width: min(90vw, 28rem);
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+#toast.error {
+  background: var(--danger);
+  color: #fff;
+}

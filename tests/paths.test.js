@@ -66,3 +66,45 @@ describe('normalizeOpenPath', () => {
     assert.equal(normalizeOpenPath('x.txt').ok, false);
   });
 });
+
+describe('extractOpenPathFromArgv', () => {
+  it('returns first md path or null', () => {
+    const {
+      extractOpenPathFromArgv: one,
+    } = require('../lib/paths');
+    assert.equal(one(['electron', 'a.md', 'b.md']).endsWith('a.md'), true);
+    assert.equal(one(['electron', '--foo']), null);
+  });
+});
+
+describe('resolveRelativeMarkdownHref', () => {
+  const { resolveRelativeMarkdownHref } = require('../lib/paths');
+  const from = path.join('C:', 'notes', 'index.md');
+
+  it('resolves sibling md', () => {
+    const r = resolveRelativeMarkdownHref(from, './other.md');
+    assert.ok(r);
+    assert.ok(r.toLowerCase().endsWith(path.join('notes', 'other.md').toLowerCase()) || r.endsWith('other.md'));
+  });
+
+  it('appends .md for extensionless relative', () => {
+    const r = resolveRelativeMarkdownHref(from, 'guide');
+    assert.ok(r && r.endsWith('guide.md'));
+  });
+
+  it('rejects http and absolute', () => {
+    assert.equal(resolveRelativeMarkdownHref(from, 'https://x.com/a.md'), null);
+    assert.equal(resolveRelativeMarkdownHref(from, 'C:\\x\\a.md'), null);
+    assert.equal(resolveRelativeMarkdownHref(from, '/etc/a.md'), null);
+  });
+
+  it('rejects non-markdown targets', () => {
+    assert.equal(resolveRelativeMarkdownHref(from, './photo.png'), null);
+    assert.equal(resolveRelativeMarkdownHref(from, './secret.exe'), null);
+  });
+
+  it('allows parent relative md', () => {
+    const r = resolveRelativeMarkdownHref(from, '../readme.md');
+    assert.ok(r && r.toLowerCase().endsWith('readme.md'));
+  });
+});

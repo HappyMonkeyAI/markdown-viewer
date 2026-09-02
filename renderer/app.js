@@ -3,6 +3,7 @@
 const api = window.mdViewer;
 
 const els = {
+  back: document.getElementById('btn-back'),
   open: document.getElementById('btn-open'),
   reveal: document.getElementById('btn-reveal'),
   editor: document.getElementById('btn-editor'),
@@ -61,7 +62,7 @@ function updateZoomLabel(factor) {
 }
 
 /**
- * @param {{ path: string, name: string, html: string, title: string }} payload
+ * @param {{ path: string, name: string, html: string, title: string, canGoBack?: boolean }} payload
  */
 function showFile(payload) {
   current = { path: payload.path, name: payload.name };
@@ -69,6 +70,7 @@ function showFile(payload) {
   els.label.title = payload.path;
   els.reveal.disabled = false;
   if (els.editor) els.editor.disabled = false;
+  setBackEnabled(Boolean(payload.canGoBack));
   els.empty.hidden = true;
   els.content.hidden = false;
   els.content.innerHTML = payload.html || '';
@@ -88,10 +90,18 @@ function showFile(payload) {
     } else {
       a.addEventListener('click', function (ev) {
         ev.preventDefault();
-        showToast('Local relative links are not opened yet', false);
+        api.openRelative(href).then(function (result) {
+          if (!result || !result.ok) {
+            showToast((result && result.error) || 'Could not open link', true);
+          }
+        });
       });
     }
   });
+}
+
+function setBackEnabled(on) {
+  if (els.back) els.back.disabled = !on;
 }
 
 /**
@@ -137,6 +147,7 @@ function showEmpty(recentsList) {
   els.label.title = '';
   els.reveal.disabled = true;
   if (els.editor) els.editor.disabled = true;
+  setBackEnabled(false);
   els.empty.hidden = false;
   els.content.hidden = true;
   els.content.innerHTML = '';
@@ -152,6 +163,16 @@ function showEmpty(recentsList) {
 els.open.addEventListener('click', function () {
   api.openDialog();
 });
+
+if (els.back) {
+  els.back.addEventListener('click', function () {
+    api.navigateBack().then(function (result) {
+      if (!result || !result.ok) {
+        showToast((result && result.error) || 'No history', false);
+      }
+    });
+  });
+}
 
 els.reveal.addEventListener('click', function () {
   if (current && current.path) api.showItemInFolder(current.path);
@@ -236,6 +257,10 @@ api.onRecents(function (list) {
   if (!current) renderRecents(list);
 });
 
+api.onNav(function (payload) {
+  setBackEnabled(Boolean(payload && payload.canGoBack));
+});
+
 initTheme();
 showEmpty();
 api.getZoom().then(updateZoomLabel);
@@ -243,6 +268,10 @@ api.getZoom().then(updateZoomLabel);
 window.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     els.toast.hidden = true;
+  }
+  if (e.altKey && e.key === 'ArrowLeft') {
+    e.preventDefault();
+    api.navigateBack();
   }
   if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
     e.preventDefault();

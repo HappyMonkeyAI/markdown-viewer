@@ -2,6 +2,17 @@
 
 Updated: 2026-09-02
 
+## 2026-09-02 — Relative md links + Back (v0.2.1)
+
+**Implemented**
+- `resolveRelativeMarkdownHref` + in-app open; extensionless → `.md`
+- Nav stack + Back (toolbar / Alt+Left / File menu)
+- Fixed missing `extractOpenPathFromArgv` export (argv / double-click open)
+- Fixture `linked.md` + sample relative links
+
+**Verified:** `npm test` 32/32 · smoke 6/6
+
+
 ## 2026-09-02 — v0.2.0 package reinstall + root AGENTS.md
 
 **Packaging**

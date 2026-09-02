@@ -37,3 +37,8 @@ Remote image (https allowed by CSP):
 Relative image (resolved under this file’s folder, sandboxed):
 
 ![local sample](./sample-dot.png)
+
+Relative markdown link:
+
+- [Linked note](./linked.md)
+- Extensionless: [linked](linked)

@@ -14,7 +14,7 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const { JSDOM } = require('jsdom');
 const { spawn } = require('child_process');
-const { extractOpenPathFromArgv, isMarkdownPath } = require('./lib/paths');
+const { extractOpenPathFromArgv, isMarkdownPath, resolveRelativeMarkdownHref } = require('./lib/paths');
 const { createMarkdownRenderer } = require('./lib/markdown');
 const { rewriteLocalImageSrcs } = require('./lib/media');
 const { createPrefsStore } = require('./lib/prefs');
@@ -29,6 +29,10 @@ let currentFile = null;
 let md = null;
 /** @type {ReturnType<typeof createPrefsStore> | null} */
 let prefs = null;
+/** @type {string[]} */
+let navStack = [];
+/** @type {number} */
+let navIndex = -1;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -80,7 +84,7 @@ function startWatch(filePath) {
 
 /**
  * @param {string} filePath
- * @param {{ fromWatch?: boolean }} [opts]
+ * @param {{ fromWatch?: boolean, fromHistory?: boolean }} [opts]
  */
 async function openMarkdownFile(filePath, opts = {}) {
   const resolved = path.resolve(filePath);
@@ -103,13 +107,28 @@ async function openMarkdownFile(filePath, opts = {}) {
   currentFile = resolved;
   startWatch(resolved);
   if (prefs) prefs.recordOpen(resolved);
+
+  if (!opts.fromWatch && !opts.fromHistory) {
+    const top = navIndex >= 0 ? navStack[navIndex] : null;
+    if (top !== resolved) {
+      navStack = navStack.slice(0, navIndex + 1);
+      navStack.push(resolved);
+      if (navStack.length > 40) {
+        navStack = navStack.slice(-40);
+      }
+      navIndex = navStack.length - 1;
+    }
+  }
+
   rebuildMenu();
+  sendNavState();
 
   const payload = {
     path: resolved,
     name: path.basename(resolved),
     html,
     title,
+    canGoBack: navIndex > 0,
   };
 
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -120,6 +139,38 @@ async function openMarkdownFile(filePath, opts = {}) {
     }
   }
   return { ok: true, ...payload };
+}
+
+function sendNavState() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('md:nav', { canGoBack: navIndex > 0 });
+  }
+}
+
+async function navigateBack() {
+  if (navIndex <= 0) return { ok: false, error: 'No history' };
+  navIndex -= 1;
+  const target = navStack[navIndex];
+  return openMarkdownFile(target, { fromHistory: true });
+}
+
+/**
+ * Open a relative markdown href from the current file.
+ * @param {string} href
+ */
+async function openRelativeHref(href) {
+  if (!currentFile) {
+    return { ok: false, error: 'No file open' };
+  }
+  const resolved = resolveRelativeMarkdownHref(currentFile, href);
+  if (!resolved) {
+    return { ok: false, error: 'Not a relative markdown link' };
+  }
+  if (!fs.existsSync(resolved)) {
+    sendError(`Missing: ${path.basename(resolved)}`);
+    return { ok: false, error: 'File not found' };
+  }
+  return openMarkdownFile(resolved);
 }
 
 function sendError(message) {
@@ -247,6 +298,12 @@ function rebuildMenu() {
           click: () => void openWithDialog(),
         },
         {
+          label: 'Back',
+          accelerator: 'Alt+Left',
+          enabled: navIndex > 0,
+          click: () => void navigateBack(),
+        },
+        {
           label: 'Open recent',
           submenu: recentSub,
         },
@@ -366,6 +423,11 @@ app.whenReady().then(async () => {
     if (typeof filePath !== 'string') return { ok: false, error: 'Invalid path' };
     return openMarkdownFile(filePath);
   });
+  ipcMain.handle('md:open-relative', (_e, href) => {
+    if (typeof href !== 'string') return { ok: false, error: 'Invalid href' };
+    return openRelativeHref(href);
+  });
+  ipcMain.handle('md:navigate-back', () => navigateBack());
   ipcMain.handle('md:show-item', (_e, filePath) => {
     if (typeof filePath === 'string' && filePath) shell.showItemInFolder(filePath);
   });

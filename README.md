@@ -69,12 +69,13 @@ Silent install smoke (advanced):
 
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
 - Main process reads files and renders markdown; renderer gets sanitized HTML over IPC
-- http(s) links open in the system browser; relative local **links** are not followed
+- http(s) links open in the system browser
+- Relative **markdown** links open in-app (Back / Alt+Left); non-md relative targets are rejected
 - Relative **images** are inlined only if they resolve under the open file’s directory (no `..` escape), match an image extension, and are ≤2 MiB
 
 ## Scope (v0.2)
 
 - Open one file (argv, dialog, drag-drop, second-instance); restore **last file** on launch
 - Recents (menu + empty state), zoom persistence, Edit (VS Code / Notepad), Print
-- GFM preview, relative images (sandboxed), light/dark theme, live reload on disk change
+- GFM preview, relative images + relative `.md` links, light/dark theme, live reload on disk change
 - Not a vault browser or wikilink graph (see **kb-vault-ui** for that)

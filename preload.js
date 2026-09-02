@@ -5,6 +5,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('mdViewer', {
   openDialog: () => ipcRenderer.invoke('md:open-dialog'),
   openPath: (filePath) => ipcRenderer.invoke('md:open-path', filePath),
+  openRelative: (href) => ipcRenderer.invoke('md:open-relative', href),
+  navigateBack: () => ipcRenderer.invoke('md:navigate-back'),
   showItemInFolder: (filePath) => ipcRenderer.invoke('md:show-item', filePath),
   openExternal: (url) => ipcRenderer.invoke('md:open-external', url),
   getRecents: () => ipcRenderer.invoke('md:get-recents'),
@@ -30,5 +32,10 @@ contextBridge.exposeInMainWorld('mdViewer', {
     const listener = (_event, payload) => cb(payload);
     ipcRenderer.on('md:recents', listener);
     return () => ipcRenderer.removeListener('md:recents', listener);
+  },
+  onNav: (cb) => {
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on('md:nav', listener);
+    return () => ipcRenderer.removeListener('md:nav', listener);
   },
 });

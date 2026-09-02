@@ -2,6 +2,24 @@
 
 Updated: 2026-09-02
 
+## 2026-09-02 — Phase 3 polish (v0.2.0)
+
+**Implemented**
+
+- `lib/media.js` — relative images under note dir only; traversal blocked; image ext allowlist; ≤2MiB data-URL rewrite
+- `lib/prefs.js` — recents (12), lastFile restore on launch, zoomFactor
+- Main menu: Open recent, Open in editor, Print; View zoom
+- Toolbar: Edit, zoom ±, empty-state recent list
+- Fixture `fixtures/sample-dot.png` + sample.md relative image
+
+**Verified**
+
+| Check | Result |
+|-------|--------|
+| `npm test` | 26/26 |
+| `npm run smoke` | 6/6 |
+| fixture rewrite | data URL present; no raw `./sample-dot` src |
+
 ## 2026-09-02 — Private GitHub + install associations
 
 **Repo:** https://github.com/SPhillips1337/markdown-viewer (private)

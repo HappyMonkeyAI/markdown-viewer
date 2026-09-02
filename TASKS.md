@@ -24,7 +24,10 @@
 - [x] Run `npm run dist:dir`; confirm `dist/win-unpacked/Markdown Viewer.exe`
 - [x] Portable + NSIS artifacts (`dist:portable`, `dist:nsis`; `dist` builds all three)
 - [x] Silent NSIS install/uninstall smoke to temp prefix (EXE + uninstaller present)
-- [ ] Optional: set **default app** for `.md` once in Windows Settings (manual UX)
+- [x] Install NSIS to `%LOCALAPPDATA%\Programs\Markdown Viewer`
+- [x] Register user Open With / ProgId (`.md`/`.markdown`/`.mdown`) via `scripts/register-md-openwith.ps1`
+- [x] Smoke: opening `fixtures/sample.md` launches Markdown Viewer
+- [ ] Optional: if another app holds UserChoice, set default in Windows Settings UI
 - [x] Document SmartScreen / unsigned + associations in README
 
 ## Phase 3 — Optional product extras (only if requested)

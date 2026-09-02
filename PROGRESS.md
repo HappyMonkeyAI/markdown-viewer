@@ -2,6 +2,18 @@
 
 Updated: 2026-09-02
 
+## 2026-09-02 — Private GitHub + install associations
+
+**Repo:** https://github.com/SPhillips1337/markdown-viewer (private)
+**Commits:** `7bc9752` initial · `f5d9e07` docs/packaging/lane · follow-up register script
+
+**Install**
+- NSIS silent → `%LOCALAPPDATA%\Programs\Markdown Viewer\Markdown Viewer.exe`
+- `scripts/register-md-openwith.ps1` → ProgId `MarkdownViewer.md`, `.md` default = that ProgId (no UserChoice lock)
+- Opening `fixtures/sample.md` launched Markdown Viewer processes
+
+**AGENTS.md:** root write blocked; content in `docs/protocol/AGENTS.proposed.md` (copy to root when allowlist approves)
+
 ## 2026-09-02 — GitHub private repo + AGENTS proposal
 
 **Implemented**

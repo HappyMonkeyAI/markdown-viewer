@@ -60,7 +60,7 @@ npm run dist              # dir + portable + nsis
 
 **SmartScreen:** builds are **unsigned**. Windows may warn “Windows protected your PC” on first run — More info → Run anyway. That is not an app crash.
 
-**Associations:** declared in `package.json` `build.fileAssociations` (`.md`, `.markdown`, `.mdown`). They register on **NSIS install** for the installing user. After install: Settings → Apps → Default apps, or right-click → Open with → Markdown Viewer. `npm start` / portable / unpacked-dir alone do not own the system default handler.
+**Associations:** declared in `package.json` `build.fileAssociations` (`.md`, `.markdown`, `.mdown`). They register on **NSIS install** for the installing user. After install: run `powershell -ExecutionPolicy Bypass -File scripts/register-md-openwith.ps1` (user ProgId / Open with). If Windows has a locked UserChoice, also use Settings → Default apps or right-click → Open with → Always. Installed path: `%LOCALAPPDATA%\Programs\Markdown Viewer\`. `npm start` / portable / unpacked-dir alone do not own the system default handler.
 
 Silent install smoke (advanced):  
 `Setup.exe /S /D=C:\path\to\dir` then uninstall with `Uninstall Markdown Viewer.exe /S`.

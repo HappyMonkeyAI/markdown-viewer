@@ -1,6 +1,6 @@
 # Windows GitHub Release pattern (unsigned Electron / desktop)
 
-Reusable checklist used for **Markdown Viewer v0.2.2**. Copy for other local Windows projects.
+Reusable checklist used for **Markdown Viewer** (e.g. v0.2.2, v0.2.3). Copy for other local Windows projects.
 
 ## Preconditions
 
@@ -72,4 +72,4 @@ gh release view "v${VER}"
 # open the release URL; confirm both assets + SmartScreen wording
 ```
 
-Live example: https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.2
+Live examples: [v0.2.3](https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.3), [v0.2.2](https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.2)

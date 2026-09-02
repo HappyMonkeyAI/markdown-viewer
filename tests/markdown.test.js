@@ -34,10 +34,16 @@ describe('createMarkdownRenderer', () => {
     assert.match(html, /<strong>world<\/strong>/);
   });
 
-  it('highlights fenced code', () => {
+  it('highlights fenced code with known lang', () => {
     const { html } = render('```js\nconst x = 1;\n```');
     assert.match(html, /hljs/);
     assert.match(html, /language-js|hljs/);
+  });
+
+  it('escapes unlabeled fences without highlightAuto', () => {
+    const { html } = render('```\n<script>x</script>\n```');
+    assert.doesNotMatch(html, /<script/i);
+    assert.match(html, /&lt;script&gt;|&lt;script/i);
   });
 
   it('sanitizes script tags from raw HTML in markdown', () => {

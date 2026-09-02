@@ -18,7 +18,7 @@ Set-ItemProperty -Path "HKCU:\Software\Classes\$progId\DefaultIcon" -Name $defau
 New-Item -Path "HKCU:\Software\Classes\$progId\shell\open\command" -Force | Out-Null
 Set-ItemProperty -Path "HKCU:\Software\Classes\$progId\shell\open\command" -Name $defaultName -Value $cmd
 
-foreach ($ext in @('.md', '.markdown', '.mdown')) {
+foreach ($ext in @('.md', '.markdown', '.mdown', '.mkd', '.mkdn', '.mdx')) {
   $base = "HKCU:\Software\Classes\$ext"
   New-Item -Path $base -Force | Out-Null
   New-Item -Path "$base\OpenWithProgids" -Force | Out-Null

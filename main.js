@@ -7,14 +7,19 @@ const {
   dialog,
   shell,
   Menu,
-  nativeTheme,
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 const { JSDOM } = require('jsdom');
 const { spawn } = require('child_process');
-const { extractOpenPathFromArgv, isMarkdownPath, resolveRelativeMarkdownHref } = require('./lib/paths');
+const {
+  extractOpenPathFromArgv,
+  isMarkdownPath,
+  resolveRelativeMarkdownHref,
+  markdownDialogFilter,
+  isAllowedUserPath,
+  MAX_MARKDOWN_BYTES,
+} = require('./lib/paths');
 const { createMarkdownRenderer } = require('./lib/markdown');
 const { rewriteLocalImageSrcs } = require('./lib/media');
 const { createPrefsStore } = require('./lib/prefs');
@@ -28,6 +33,8 @@ let watcher = null;
 let currentFile = null;
 /** @type {ReturnType<typeof createMarkdownRenderer> | null} */
 let md = null;
+/** @type {import('jsdom').JSDOM | null} */
+let workDom = null;
 /** @type {ReturnType<typeof createPrefsStore> | null} */
 let prefs = null;
 /** @type {string[]} */
@@ -47,14 +54,130 @@ if (!gotLock) {
     }
     if (file) void openMarkdownFile(file);
   });
+
+  app.whenReady().then(async () => {
+    prefs = createPrefsStore(app.getPath('userData'));
+
+    ipcMain.handle('md:open-dialog', () => openWithDialog());
+    ipcMain.handle('md:open-path', (_e, filePath) => {
+      if (typeof filePath !== 'string') return { ok: false, error: 'Invalid path' };
+      return openMarkdownFile(filePath);
+    });
+    ipcMain.handle('md:open-relative', (_e, href) => {
+      if (typeof href !== 'string') return { ok: false, error: 'Invalid href' };
+      return openRelativeHref(href);
+    });
+    ipcMain.handle('md:navigate-back', () => navigateBack());
+    ipcMain.handle('md:show-item', (_e, filePath) => {
+      if (typeof filePath !== 'string' || !filePath) {
+        return { ok: false, error: 'No file' };
+      }
+      if (!isSessionPath(filePath)) {
+        return { ok: false, error: 'Path not allowed' };
+      }
+      shell.showItemInFolder(path.resolve(filePath));
+      return { ok: true };
+    });
+    ipcMain.handle('md:open-external', (_e, url) => {
+      if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+        return shell.openExternal(url);
+      }
+      return Promise.resolve();
+    });
+    ipcMain.handle('md:get-recents', () => (prefs ? prefs.getRecents() : []));
+    ipcMain.handle('md:open-in-editor', (_e, filePath) => {
+      if (typeof filePath !== 'string' || !filePath) {
+        return { ok: false, error: 'No file' };
+      }
+      if (!isSessionPath(filePath)) {
+        return { ok: false, error: 'Path not allowed' };
+      }
+      return openInExternalEditor(filePath);
+    });
+    ipcMain.handle('md:set-zoom', (_e, factor) => {
+      if (typeof factor === 'number') setZoom(factor);
+      return prefs ? prefs.getZoomFactor() : 1;
+    });
+    ipcMain.handle('md:get-zoom', () =>
+      mainWindow && !mainWindow.isDestroyed()
+        ? mainWindow.webContents.getZoomFactor()
+        : prefs
+          ? prefs.getZoomFactor()
+          : 1
+    );
+    ipcMain.handle('md:find-in-page', (_e, text, opts) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return -1;
+      const q = typeof text === 'string' ? text : '';
+      if (!q) {
+        mainWindow.webContents.stopFindInPage('clearSelection');
+        return -1;
+      }
+      const forward = !opts || opts.forward !== false;
+      const findNext = Boolean(opts && opts.findNext);
+      return mainWindow.webContents.findInPage(q, {
+        forward,
+        findNext,
+        matchCase: Boolean(opts && opts.matchCase),
+      });
+    });
+    ipcMain.handle('md:stop-find', (_e, action) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      const a = action === 'keepSelection' ? 'keepSelection' : 'clearSelection';
+      mainWindow.webContents.stopFindInPage(a);
+    });
+
+    createWindow();
+
+    const fromArgv = extractOpenPathFromArgv(process.argv);
+    if (fromArgv) {
+      await openMarkdownFile(fromArgv);
+    } else if (prefs && prefs.getLastFile()) {
+      const last = prefs.getLastFile();
+      if (last && fs.existsSync(last) && isMarkdownPath(last)) {
+        await openMarkdownFile(last);
+      } else if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.once('did-finish-load', () => {
+          mainWindow.webContents.send('md:recents', prefs.getRecents());
+        });
+      }
+    }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    stopWatch();
+    if (process.platform !== 'darwin') app.quit();
+  });
+}
+
+function getWorkWindow() {
+  if (!workDom) {
+    workDom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+  }
+  return workDom.window;
 }
 
 function getRenderer() {
   if (!md) {
-    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-    md = createMarkdownRenderer({ window: dom.window });
+    md = createMarkdownRenderer({ window: getWorkWindow() });
   }
   return md;
+}
+
+function recentPathList() {
+  if (!prefs) return [];
+  return prefs.getRecents().map((r) => r.path);
+}
+
+function isSessionPath(filePath) {
+  return isAllowedUserPath(filePath, {
+    currentFile,
+    navStack,
+    recentPaths: recentPathList(),
+  });
 }
 
 function stopWatch() {
@@ -93,6 +216,25 @@ async function openMarkdownFile(filePath, opts = {}) {
     sendError(`Not a markdown file: ${path.basename(resolved)}`);
     return { ok: false, error: 'Not a markdown file' };
   }
+
+  let st;
+  try {
+    st = fs.statSync(resolved);
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    sendError(`Could not read file: ${msg}`);
+    return { ok: false, error: msg };
+  }
+  if (!st.isFile()) {
+    sendError('Not a file');
+    return { ok: false, error: 'Not a file' };
+  }
+  if (st.size > MAX_MARKDOWN_BYTES) {
+    const msg = `File too large (max ${Math.floor(MAX_MARKDOWN_BYTES / (1024 * 1024))} MiB)`;
+    sendError(msg);
+    return { ok: false, error: msg };
+  }
+
   let source;
   try {
     source = fs.readFileSync(resolved, 'utf8');
@@ -102,10 +244,10 @@ async function openMarkdownFile(filePath, opts = {}) {
     return { ok: false, error: msg };
   }
 
+  const win = getWorkWindow();
   const { html: rawHtml, title } = getRenderer().render(source);
-  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-  const htmlWithImages = rewriteLocalImageSrcs(rawHtml, resolved, { window: dom.window });
-  const wrap = dom.window.document.createElement('div');
+  const htmlWithImages = rewriteLocalImageSrcs(rawHtml, resolved, { window: win });
+  const wrap = win.document.createElement('div');
   wrap.innerHTML = htmlWithImages;
   const outline = decorateHeadings(wrap);
   const html = wrap.innerHTML;
@@ -190,10 +332,7 @@ async function openWithDialog() {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Open Markdown',
     properties: ['openFile'],
-    filters: [
-      { name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd', 'mkdn'] },
-      { name: 'All files', extensions: ['*'] },
-    ],
+    filters: [markdownDialogFilter(), { name: 'All files', extensions: ['*'] }],
   });
   if (result.canceled || !result.filePaths[0]) {
     return { ok: false, canceled: true };
@@ -210,6 +349,9 @@ function openInExternalEditor(filePath) {
   if (!fs.existsSync(resolved)) {
     return Promise.resolve({ ok: false, error: 'File not found' });
   }
+  if (!isSessionPath(resolved)) {
+    return Promise.resolve({ ok: false, error: 'Path not allowed' });
+  }
 
   return new Promise((resolve) => {
     let settled = false;
@@ -219,8 +361,9 @@ function openInExternalEditor(filePath) {
       resolve(result);
     };
 
-    const tryCode = spawn('code', ['-g', resolved], {
-      shell: true,
+    const codeBin = process.platform === 'win32' ? 'code.cmd' : 'code';
+    const tryCode = spawn(codeBin, ['-g', resolved], {
+      shell: false,
       windowsHide: true,
       detached: true,
       stdio: 'ignore',
@@ -245,6 +388,7 @@ function openInExternalEditor(filePath) {
       if (process.platform === 'win32') {
         try {
           const np = spawn('notepad.exe', [resolved], {
+            shell: false,
             detached: true,
             stdio: 'ignore',
             windowsHide: false,
@@ -383,8 +527,7 @@ function rebuildMenu() {
           click: () => setZoom(1),
         },
         { type: 'separator' },
-        { role: 'toggleDevTools' },
-        { role: 'reload' },
+        ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' }, { role: 'reload' }]),
       ],
     },
   ];
@@ -433,6 +576,12 @@ function createWindow() {
     },
   });
 
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  // loadFile does not go through will-navigate; deny any later in-page navigation.
+  win.webContents.on('will-navigate', (event) => {
+    event.preventDefault();
+  });
+
   win.once('ready-to-show', () => {
     win.show();
     if (prefs) {
@@ -454,94 +603,3 @@ function createWindow() {
     navIndex = -1;
   });
 }
-
-app.whenReady().then(async () => {
-  prefs = createPrefsStore(app.getPath('userData'));
-
-  ipcMain.handle('md:open-dialog', () => openWithDialog());
-  ipcMain.handle('md:open-path', (_e, filePath) => {
-    if (typeof filePath !== 'string') return { ok: false, error: 'Invalid path' };
-    return openMarkdownFile(filePath);
-  });
-  ipcMain.handle('md:open-relative', (_e, href) => {
-    if (typeof href !== 'string') return { ok: false, error: 'Invalid href' };
-    return openRelativeHref(href);
-  });
-  ipcMain.handle('md:navigate-back', () => navigateBack());
-  ipcMain.handle('md:show-item', (_e, filePath) => {
-    if (typeof filePath === 'string' && filePath) shell.showItemInFolder(filePath);
-  });
-  ipcMain.handle('md:open-external', (_e, url) => {
-    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
-      return shell.openExternal(url);
-    }
-    return Promise.resolve();
-  });
-  ipcMain.handle('md:get-recents', () => (prefs ? prefs.getRecents() : []));
-  ipcMain.handle('md:open-in-editor', (_e, filePath) => {
-    if (typeof filePath !== 'string' || !filePath) {
-      return { ok: false, error: 'No file' };
-    }
-    return openInExternalEditor(filePath);
-  });
-  ipcMain.handle('md:set-zoom', (_e, factor) => {
-    if (typeof factor === 'number') setZoom(factor);
-    return prefs ? prefs.getZoomFactor() : 1;
-  });
-  ipcMain.handle('md:get-zoom', () =>
-    mainWindow && !mainWindow.isDestroyed()
-      ? mainWindow.webContents.getZoomFactor()
-      : prefs
-        ? prefs.getZoomFactor()
-        : 1
-  );
-  ipcMain.handle('md:find-in-page', (_e, text, opts) => {
-    if (!mainWindow || mainWindow.isDestroyed()) return -1;
-    const q = typeof text === 'string' ? text : '';
-    if (!q) {
-      mainWindow.webContents.stopFindInPage('clearSelection');
-      return -1;
-    }
-    const forward = !opts || opts.forward !== false;
-    const findNext = Boolean(opts && opts.findNext);
-    return mainWindow.webContents.findInPage(q, {
-      forward,
-      findNext,
-      matchCase: Boolean(opts && opts.matchCase),
-    });
-  });
-  ipcMain.handle('md:stop-find', (_e, action) => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    const a = action === 'keepSelection' ? 'keepSelection' : 'clearSelection';
-    mainWindow.webContents.stopFindInPage(a);
-  });
-
-  createWindow();
-
-  const fromArgv = extractOpenPathFromArgv(process.argv);
-  if (fromArgv) {
-    await openMarkdownFile(fromArgv);
-  } else if (prefs && prefs.getLastFile()) {
-    const last = prefs.getLastFile();
-    if (last && fs.existsSync(last) && isMarkdownPath(last)) {
-      await openMarkdownFile(last);
-    } else if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.once('did-finish-load', () => {
-        mainWindow.webContents.send('md:recents', prefs.getRecents());
-      });
-    }
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
-
-app.on('window-all-closed', () => {
-  stopWatch();
-  if (process.platform !== 'darwin') app.quit();
-});
-
-// Silence unused import if tree-shaken differently
-void pathToFileURL;
-void nativeTheme;

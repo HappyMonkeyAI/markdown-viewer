@@ -1,5 +1,19 @@
 # PROGRESS.md — Markdown Viewer
 
+## 2026-09-02 — Code-quality / hardening (v0.2.3)
+
+**Implemented (from code review P0–P2)**
+- Single-instance: `whenReady` + lifecycle only when `requestSingleInstanceLock` succeeds
+- Unified markdown extensions (`.md`/`.markdown`/`.mdown`/`.mkd`/`.mkdn`/`.mdx`) across paths, dialog, Open With script, electron-builder associations
+- IPC path allowlist for `open-in-editor` / `show-item` (current + nav stack + recents)
+- `setWindowOpenHandler` deny + `will-navigate` preventDefault
+- Editor spawn without `shell: true` (`code.cmd` / `notepad.exe`)
+- Markdown body size cap 8 MiB; shared jsdom for render/images/outline
+- Drop `highlightAuto` (escape unlabeled fences); atomic prefs write; DevTools only when unpackaged
+- Tests: dialog↔ext parity, `isAllowedUserPath`, unlabeled fence escape
+
+**Verified:** `npm test` 39/39 · smoke 6/6
+
 ## 2026-09-02 — GitHub Release v0.2.2 (unsigned Windows)
 
 - Tag `v0.2.2` on `0a36c67`; public release with NSIS Setup + portable

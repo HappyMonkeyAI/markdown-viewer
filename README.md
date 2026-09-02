@@ -30,7 +30,7 @@ Requires Node.js 18+ and Windows x64 for packaging targets.
 
 ## Install (Windows)
 
-**Prebuilt:** [GitHub Release v0.2.2](https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.2) (NSIS + portable). Builds are **unsigned** — SmartScreen may require More info → Run anyway. Playbook for other projects: [`docs/release-windows-unsigned.md`](./docs/release-windows-unsigned.md).
+**Prebuilt:** [GitHub Release v0.2.3](https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.3) (NSIS + portable). Builds are **unsigned** — SmartScreen may require More info → Run anyway. Playbook for other projects: [`docs/release-windows-unsigned.md`](./docs/release-windows-unsigned.md).
 
 ```bash
 npm run dist:nsis       # dist/Markdown Viewer Setup <version>.exe

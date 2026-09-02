@@ -7,6 +7,11 @@ const {
   isMarkdownPath,
   extractOpenPathsFromArgv,
   normalizeOpenPath,
+  markdownDialogFilter,
+  MARKDOWN_DIALOG_EXTENSIONS,
+  MARKDOWN_EXTS,
+  isAllowedUserPath,
+  MAX_MARKDOWN_BYTES,
 } = require('../lib/paths');
 
 describe('isMarkdownPath', () => {
@@ -15,6 +20,8 @@ describe('isMarkdownPath', () => {
     assert.equal(isMarkdownPath('C:\\\\docs\\\\a.markdown'), true);
     assert.equal(isMarkdownPath('/tmp/x.MD'), true);
     assert.equal(isMarkdownPath('readme.mdx'), true);
+    assert.equal(isMarkdownPath('x.mkdn'), true);
+    assert.equal(isMarkdownPath('x.mkd'), true);
   });
 
   it('rejects non-markdown', () => {
@@ -22,6 +29,39 @@ describe('isMarkdownPath', () => {
     assert.equal(isMarkdownPath(''), false);
     assert.equal(isMarkdownPath(null), false);
     assert.equal(isMarkdownPath('file.'), false);
+  });
+});
+
+describe('markdownDialogFilter', () => {
+  it('matches MARKDOWN_EXTS (no drift vs dialog)', () => {
+    const f = markdownDialogFilter();
+    assert.equal(f.name, 'Markdown');
+    for (const ext of f.extensions) {
+      assert.equal(MARKDOWN_EXTS.has(`.${ext}`), true, `missing .${ext} in MARKDOWN_EXTS`);
+    }
+    assert.equal(f.extensions.length, MARKDOWN_DIALOG_EXTENSIONS.length);
+    assert.equal(f.extensions.length, MARKDOWN_EXTS.size);
+  });
+});
+
+describe('isAllowedUserPath', () => {
+  const cur = path.resolve('C:', 'notes', 'a.md');
+  const other = path.resolve('C:', 'notes', 'b.md');
+  const stranger = path.resolve('C:', 'Windows', 'x.md');
+
+  it('allows current, nav, and recents only', () => {
+    assert.equal(isAllowedUserPath(cur, { currentFile: cur }), true);
+    assert.equal(isAllowedUserPath(other, { navStack: [other] }), true);
+    assert.equal(isAllowedUserPath(other, { recentPaths: [other] }), true);
+    assert.equal(isAllowedUserPath(stranger, { currentFile: cur, navStack: [other] }), false);
+    assert.equal(isAllowedUserPath('', { currentFile: cur }), false);
+  });
+});
+
+describe('MAX_MARKDOWN_BYTES', () => {
+  it('is a positive finite cap', () => {
+    assert.equal(typeof MAX_MARKDOWN_BYTES, 'number');
+    assert.ok(MAX_MARKDOWN_BYTES >= 1024 * 1024);
   });
 });
 

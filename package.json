@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Windows 11 thin Electron markdown viewer (double-click / Open With)",
   "main": "main.js",
   "author": "Stephen Phillips",
@@ -58,6 +58,24 @@
       },
       {
         "ext": "mdown",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mkd",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mkdn",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mdx",
         "name": "Markdown",
         "description": "Markdown Document",
         "role": "Viewer"

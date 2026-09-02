@@ -76,6 +76,6 @@ Silent install smoke (advanced):
 ## Scope (v0.2)
 
 - Open one file (argv, dialog, drag-drop, second-instance); restore **last file** on launch
-- Recents (menu + empty state), zoom persistence, Edit (VS Code / Notepad), Print
+- Recents (menu + empty state), zoom persistence, Edit (VS Code / Notepad), Print, Find, Outline
 - GFM preview, relative images + relative `.md` links, light/dark theme, live reload on disk change
 - Not a vault browser or wikilink graph (see **kb-vault-ui** for that)

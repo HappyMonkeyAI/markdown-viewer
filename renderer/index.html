@@ -19,26 +19,41 @@
         <button type="button" id="btn-open" title="Open markdown file (Ctrl+O)">Open</button>
         <button type="button" id="btn-reveal" title="Show in Explorer" disabled>Reveal</button>
         <button type="button" id="btn-editor" title="Open in editor (Ctrl+E)" disabled>Edit</button>
+        <button type="button" id="btn-outline" title="Toggle outline (Ctrl+Shift+O)" disabled>Outline</button>
       </div>
       <div class="center">
         <span id="file-label" class="muted">No file open</span>
       </div>
       <div class="right">
+        <button type="button" id="btn-find" title="Find (Ctrl+F)">Find</button>
         <button type="button" id="btn-zoom-out" title="Zoom out (Ctrl+-)">−</button>
         <span id="zoom-label" class="muted zoom-label">100%</span>
         <button type="button" id="btn-zoom-in" title="Zoom in (Ctrl+=)">+</button>
         <button type="button" id="btn-theme" title="Toggle light/dark">Theme</button>
       </div>
     </header>
-    <main id="drop-zone">
-      <div id="empty" class="empty">
-        <p><strong>Markdown Viewer</strong></p>
-        <p>Open a <code>.md</code> file, drag one here, or double-click a markdown file after install.</p>
-        <p class="muted">Ctrl+O open · Ctrl+E editor · last file restores on launch</p>
-        <div id="recents" class="recents" hidden></div>
-      </div>
-      <article id="content" class="markdown-body" hidden></article>
-    </main>
+    <div id="find-bar" class="find-bar" hidden>
+      <input id="find-input" type="search" placeholder="Find in page" autocomplete="off" />
+      <span id="find-count" class="muted find-count"></span>
+      <button type="button" id="find-prev" title="Previous">↑</button>
+      <button type="button" id="find-next" title="Next">↓</button>
+      <button type="button" id="find-close" title="Close (Esc)">✕</button>
+    </div>
+    <div id="body-row" class="body-row">
+      <aside id="outline" class="outline" hidden>
+        <div class="outline-title muted">Outline</div>
+        <nav id="outline-nav"></nav>
+      </aside>
+      <main id="drop-zone">
+        <div id="empty" class="empty">
+          <p><strong>Markdown Viewer</strong></p>
+          <p>Open a <code>.md</code> file, drag one here, or double-click a markdown file after install.</p>
+          <p class="muted">Ctrl+F find · Ctrl+Shift+O outline · last file restores on launch</p>
+          <div id="recents" class="recents" hidden></div>
+        </div>
+        <article id="content" class="markdown-body" hidden></article>
+      </main>
+    </div>
     <div id="toast" hidden></div>
     <script src="./app.js"></script>
   </body>

@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('mdViewer', {
   openInEditor: (filePath) => ipcRenderer.invoke('md:open-in-editor', filePath),
   setZoom: (factor) => ipcRenderer.invoke('md:set-zoom', factor),
   getZoom: () => ipcRenderer.invoke('md:get-zoom'),
+  findInPage: (text, opts) => ipcRenderer.invoke('md:find-in-page', text, opts || {}),
+  stopFind: (action) => ipcRenderer.invoke('md:stop-find', action || 'clearSelection'),
   onOpened: (cb) => {
     const listener = (_event, payload) => cb(payload);
     ipcRenderer.on('md:opened', listener);
@@ -37,5 +39,20 @@ contextBridge.exposeInMainWorld('mdViewer', {
     const listener = (_event, payload) => cb(payload);
     ipcRenderer.on('md:nav', listener);
     return () => ipcRenderer.removeListener('md:nav', listener);
+  },
+  onFindOpen: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on('md:find-open', listener);
+    return () => ipcRenderer.removeListener('md:find-open', listener);
+  },
+  onOutlineToggle: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on('md:outline-toggle', listener);
+    return () => ipcRenderer.removeListener('md:outline-toggle', listener);
+  },
+  onFoundInPage: (cb) => {
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on('md:found-in-page', listener);
+    return () => ipcRenderer.removeListener('md:found-in-page', listener);
   },
 });

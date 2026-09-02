@@ -38,6 +38,8 @@
 - [x] Relative image resolution from file directory (sandboxed: under note dir, image ext, ≤2MiB → data URL)
 - [x] Explicit “open with default editor” (VS Code if on PATH, else Notepad; Ctrl+E / Edit button)
 - [x] Relative `.md` links in-app + Back (Alt+Left); fixed `extractOpenPathFromArgv` for CLI/double-click open
+- [x] Find in page (Ctrl+F)
+- [x] Heading outline (Ctrl+Shift+O)
 
 ## Phase 4 — Explicit non-goals unless ADR
 

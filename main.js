@@ -18,6 +18,7 @@ const { extractOpenPathFromArgv, isMarkdownPath, resolveRelativeMarkdownHref } =
 const { createMarkdownRenderer } = require('./lib/markdown');
 const { rewriteLocalImageSrcs } = require('./lib/media');
 const { createPrefsStore } = require('./lib/prefs');
+const { decorateHeadings } = require('./lib/outline');
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -103,7 +104,11 @@ async function openMarkdownFile(filePath, opts = {}) {
 
   const { html: rawHtml, title } = getRenderer().render(source);
   const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-  const html = rewriteLocalImageSrcs(rawHtml, resolved, { window: dom.window });
+  const htmlWithImages = rewriteLocalImageSrcs(rawHtml, resolved, { window: dom.window });
+  const wrap = dom.window.document.createElement('div');
+  wrap.innerHTML = htmlWithImages;
+  const outline = decorateHeadings(wrap);
+  const html = wrap.innerHTML;
   currentFile = resolved;
   startWatch(resolved);
   if (prefs) prefs.recordOpen(resolved);
@@ -128,6 +133,7 @@ async function openMarkdownFile(filePath, opts = {}) {
     name: path.basename(resolved),
     html,
     title,
+    outline,
     canGoBack: navIndex > 0,
   };
 
@@ -343,6 +349,25 @@ function rebuildMenu() {
       label: 'View',
       submenu: [
         {
+          label: 'Find…',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('md:find-open');
+            }
+          },
+        },
+        {
+          label: 'Toggle outline',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('md:outline-toggle');
+            }
+          },
+        },
+        { type: 'separator' },
+        {
           label: 'Zoom in',
           accelerator: 'CmdOrCtrl+=',
           click: () => adjustZoom(0.1),
@@ -379,6 +404,18 @@ function setZoom(factor) {
   if (prefs) prefs.setZoomFactor(z);
 }
 
+function wireFindHandlers(win) {
+  win.webContents.on('found-in-page', (_event, result) => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('md:found-in-page', {
+        activeMatchOrdinal: result.activeMatchOrdinal,
+        matches: result.matches,
+        finalUpdate: result.finalUpdate,
+      });
+    }
+  });
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 960,
@@ -406,12 +443,15 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   mainWindow = win;
+  wireFindHandlers(win);
   rebuildMenu();
 
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null;
     stopWatch();
     currentFile = null;
+    navStack = [];
+    navIndex = -1;
   });
 }
 
@@ -455,6 +495,26 @@ app.whenReady().then(async () => {
         ? prefs.getZoomFactor()
         : 1
   );
+  ipcMain.handle('md:find-in-page', (_e, text, opts) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return -1;
+    const q = typeof text === 'string' ? text : '';
+    if (!q) {
+      mainWindow.webContents.stopFindInPage('clearSelection');
+      return -1;
+    }
+    const forward = !opts || opts.forward !== false;
+    const findNext = Boolean(opts && opts.findNext);
+    return mainWindow.webContents.findInPage(q, {
+      forward,
+      findNext,
+      matchCase: Boolean(opts && opts.matchCase),
+    });
+  });
+  ipcMain.handle('md:stop-find', (_e, action) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const a = action === 'keepSelection' ? 'keepSelection' : 'clearSelection';
+    mainWindow.webContents.stopFindInPage(a);
+  });
 
   createWindow();
 

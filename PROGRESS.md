@@ -2,6 +2,16 @@
 
 Updated: 2026-09-02
 
+## 2026-09-02 — Find + outline (v0.2.2)
+
+**Implemented**
+- Ctrl+F find bar via `webContents.findInPage` (prev/next, match count)
+- Heading outline (h1–h3 ids + side panel); Ctrl+Shift+O / Outline button; preference persisted
+- In-page `#` anchors scroll to heading ids
+
+**Verified:** `npm test` 35/35 · smoke 6/6
+
+
 ## 2026-09-02 — Relative md links + Back (v0.2.1)
 
 **Implemented**

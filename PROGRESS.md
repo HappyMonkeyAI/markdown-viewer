@@ -1,5 +1,13 @@
 # PROGRESS.md — Markdown Viewer
 
+## 2026-09-02 — GitHub Release v0.2.2 (unsigned Windows)
+
+- Tag `v0.2.2` on `0a36c67`; public release with NSIS Setup + portable
+- Release notes disclose **unsigned** / SmartScreen (More info → Run anyway)
+- Assets: `Markdown Viewer Setup 0.2.2.exe` (~91MB), `MarkdownViewer-0.2.2-portable.exe` (~82MB)
+- URL: https://github.com/SPhillips1337/markdown-viewer/releases/tag/v0.2.2
+- Playbook for other projects: `docs/release-windows-unsigned.md`
+
 Updated: 2026-09-02
 
 ## 2026-09-02 — Public-release hygiene
